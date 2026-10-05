@@ -13,6 +13,17 @@ const OPPOSITE = { left: 'right', right: 'left', up: 'down', down: 'up' };
 const PACMAN_SPEED = 0.125; // 1/8 celda/frame -> alinea cada 8 frames
 const GHOST_SPEED = 0.1;    // 1/10 celda/frame
 
+// Geometria de la guarida (spec 01): interior filas 13-15 x columnas 11-16,
+// puerta en (13-14, 12), celda de salida (13-14, 11).
+const PEN = {
+  x0: 11,     // col izquierda del interior
+  x1: 16,     // col derecha del interior
+  doorY: 12,  // fila de la puerta
+  y1: 15,     // fila inferior del interior
+  doorX: 13,  // columna por la que se sale
+  exitY: 11,  // fila de la celda de salida
+};
+
 // Crea una partida nueva. Copia MAZE (pristino) a game.grid para poder comer
 // dots sin destruir el original, y reiniciar.
 function createGame() {
@@ -42,6 +53,9 @@ function createGame() {
       dir: 'up',
       speed: GHOST_SPEED,
       kind: g.kind,
+      // Salida escalonada: retardo original y cuenta atras (0 = libre).
+      releaseDelay: g.releaseDelay,
+      pendingRelease: g.releaseDelay,
     } ) ),
   };
 }
@@ -169,7 +183,52 @@ function decideGhost( game, g ) {
   g.dir = best;
 }
 
+// Esta dentro de la guarida (interior o puerta)? Por geometria: cualquier
+// fantasma ahi sigue la rutina de la guarida, nunca decideGhost.
+function inPen( g ) {
+  return g.x >= PEN.x0 && g.x <= PEN.x1 && g.y >= PEN.doorY && g.y <= PEN.y1;
+}
+
+// Espera escalonada: cuenta atras de pendingRelease y, mientras tanto,
+// oscilacion en el sitio (+/-0.2 celdas, solo visual).
+function waitInPen( g ) {
+  g.pendingRelease--;
+  if ( g.pendingRelease <= 0 ) {
+    // Fin de la espera: recolocarse en su celda y salir por la puerta.
+    g.x = Math.round( g.x );
+    g.y = Math.round( g.y );
+    g.dir = 'up';
+    return;
+  }
+  g.y = Math.round( g.y ) + 0.2 * Math.sin( g.pendingRelease * 0.1 );
+}
+
+// Rutina de salida: alinearse a la columna de la puerta y subir por ella
+// hasta la celda de salida. Movimiento guionizado: no consulta muros.
+function exitPen( g ) {
+  if ( g.x < PEN.doorX ) {
+    g.x = Math.min( g.x + g.speed, PEN.doorX );
+    g.dir = 'right';
+  } else if ( g.x > PEN.doorX ) {
+    g.x = Math.max( g.x - g.speed, PEN.doorX );
+    g.dir = 'left';
+  } else {
+    g.dir = 'up';
+    g.y = Math.max( g.y - g.speed, PEN.exitY );
+  }
+}
+
 function moveGhost( game, g ) {
+  // Guarida: primero la espera escalonada, luego la salida por la puerta.
+  if ( g.pendingRelease > 0 ) {
+    waitInPen( g );
+    return;
+  }
+  if ( inPen( g ) ) {
+    exitPen( g );
+    return;
+  }
+
   const grid = game.grid;
   const width = grid[ 0 ].length;
 
