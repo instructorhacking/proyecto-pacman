@@ -255,6 +255,8 @@ function resetPositions( game ) {
     g.x = GHOST_STARTS[ i ].x;
     g.y = GHOST_STARTS[ i ].y;
     g.dir = 'up';
+    // Rearmar la salida escalonada al perder una vida.
+    g.pendingRelease = g.releaseDelay;
   } );
 }
 
