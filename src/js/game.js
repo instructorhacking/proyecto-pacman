@@ -319,10 +319,17 @@ function resetPositions( game ) {
   p.y = PACMAN_START.y;
   p.dir = 'left';
   p.nextDir = null;
+  // Cancelar el modo asustado (spec 02): timer y cadena a 0.
+  game.frightenedTimer = 0;
+  game.ghostChain = 0;
   game.ghosts.forEach( ( g, i ) => {
     g.x = GHOST_STARTS[ i ].x;
     g.y = GHOST_STARTS[ i ].y;
     g.dir = 'up';
+    g.mode = 'normal';
+    // Rearmar la velocidad tambien: dentro el movimiento es guionizado y un
+    // 'eaten' no deberia salir luego a EATEN_SPEED (mismo caso que reviveGhost).
+    g.speed = GHOST_SPEED;
     // Rearmar la salida escalonada al perder una vida.
     g.pendingRelease = g.releaseDelay;
   } );
