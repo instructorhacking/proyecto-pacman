@@ -79,6 +79,22 @@ function drawDots( ctx, grid ) {
   }
 }
 
+// Power pellets (celda 4): circulo grande (r=7) que parpadea, ~10 frames
+// encendido y ~10 apagado. Usa game.grid: comidos, desaparecen.
+function drawPellets( ctx, grid, frame ) {
+  if ( frame % 20 >= 10 ) return; // fase apagada del ciclo
+  ctx.fillStyle = DOT_COLOR;
+  for ( let y = 0; y < grid.length; y++ ) {
+    for ( let x = 0; x < grid[ 0 ].length; x++ ) {
+      if ( grid[ y ][ x ] !== 4 ) continue;
+      const { cx, cy } = cellCenter( x, y );
+      ctx.beginPath();
+      ctx.arc( cx, cy, 7, 0, Math.PI * 2 );
+      ctx.fill();
+    }
+  }
+}
+
 function drawPacman( ctx, p, frame ) {
   const { cx, cy } = cellCenter( p.x, p.y );
   let rot = 0;
@@ -159,6 +175,7 @@ function draw( ctx, game, frame ) {
   drawWalls( ctx, grid );
   drawDoor( ctx, grid );
   drawDots( ctx, grid );
+  drawPellets( ctx, grid, frame );
   drawPacman( ctx, game.pacman, frame );
   game.ghosts.forEach( ( g, i ) => drawGhost( ctx, g, GHOST_COLORS[ i ] || '#ff0000' ) );
   drawHUD( ctx, game, W );
