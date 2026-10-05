@@ -150,6 +150,12 @@ function ghostTarget( game, g ) {
   const py = Math.round( p.y );
   const ahead = DIRS[ p.dir ] || { x: 0, y: 0 }; // donde mira PacMan
 
+  // Comido (spec 02): vuelve con greedy hacia (13,14), el interior de la
+  // guarida; la celda puerta (3) ya es transitable para fantasmas.
+  if ( g.mode === 'eaten' ) {
+    return { x: 13, y: 14 };
+  }
+
   // Asustado (spec 02): el objetivo es PacMan, pero decideGhost invierte el
   // greedy (MAXIMIZA la distancia), con lo que huye en cada cruce.
   if ( g.mode === 'frightened' ) {
@@ -266,6 +272,16 @@ function startFrightened( game ) {
   }
 }
 
+// Revive al comido que llego a la guarida (spec 02): vuelve a 'normal'
+// aunque el modo asustado siga activo. Dentro el movimiento es guionizado
+// con topes (min/max), asi que aqui si se puede fijar la velocidad sin
+// esperar una alineacion; sale con exitPen sin cambios.
+function reviveGhost( g ) {
+  g.mode = 'normal';
+  g.speed = GHOST_SPEED;
+  g.dir = 'up';
+}
+
 function moveGhost( game, g ) {
   // Guarida: primero la espera escalonada, luego la salida por la puerta.
   if ( g.pendingRelease > 0 ) {
@@ -273,6 +289,8 @@ function moveGhost( game, g ) {
     return;
   }
   if ( inPen( g ) ) {
+    // Comido que llego a la guarida: revive dentro y sale (spec 02).
+    if ( g.mode === 'eaten' ) reviveGhost( g );
     exitPen( g );
     return;
   }
@@ -329,16 +347,24 @@ function update( game ) {
     }
   }
 
+  // Colision segun modo (spec 02): asustado -> comido; ojos -> sin efecto;
+  // normal -> vida perdida como hasta ahora.
   for ( const g of game.ghosts ) {
-    if ( collides( game.pacman, g ) ) {
-      game.lives--;
-      if ( game.lives <= 0 ) {
-        game.state = 'lost';
-        return;
-      }
-      resetPositions( game );
-      break;
+    if ( !collides( game.pacman, g ) ) continue;
+    if ( g.mode === 'eaten' ) continue; // ojos: ni puntuan ni matan
+    if ( g.mode === 'frightened' ) {
+      game.score += GHOST_POINTS[ game.ghostChain ];
+      game.ghostChain++;
+      g.mode = 'eaten';
+      continue; // puede haber mas asustados en contacto este frame
     }
+    game.lives--;
+    if ( game.lives <= 0 ) {
+      game.state = 'lost';
+      return;
+    }
+    resetPositions( game );
+    break;
   }
 
   if ( game.dotsRemaining <= 0 ) game.state = 'won';
