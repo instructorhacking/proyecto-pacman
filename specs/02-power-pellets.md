@@ -1,6 +1,6 @@
 # SPEC 02 — Power pellets y modo asustado
 
-> **Estado:** Draft
+> **Estado:** Approved
 > **Depende de:** SPEC 01 (fantasmas con kinds y salida escalonada)
 > **Fecha:** 2026-10-05
 > **Objetivo:** Añadir 4 power pellets que, al comerlos, asustan ~6 s a los
